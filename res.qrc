@@ -1,0 +1,25 @@
+<RCC>
+    <qresource prefix="/pic">
+        <file>path31.png</file>
+        <file>32bit.png</file>
+        <file>0_32.png</file>
+        <file>0_s.png</file>
+        <file>1_32.png</file>
+        <file>1_s.png</file>
+        <file>2_32.png</file>
+        <file>2_s.png</file>
+        <file>3_32.png</file>
+        <file>3_s.png</file>
+        <file>4_32.png</file>
+        <file>4_s.png</file>
+        <file>5_32.png</file>
+        <file>5_s.png</file>
+        <file>6_32.png</file>
+        <file>6_s.png</file>
+        <file>7_32.png</file>
+        <file>7_s.png</file>
+        <file>path32.png</file>
+        <file>rand.png</file>
+        <file>startPic.png</file>
+    </qresource>
+</RCC>
