@@ -1,2 +1,3 @@
-# hideMyFile
-Hide a file into a picture.
+# 幻影坦克
+你可以将任意文件藏进一张图片里
+文件大小<=3107520字节（约2.96Mb）
