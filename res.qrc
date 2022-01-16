@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/pic">
         <file>path31.png</file>
-        <file>32bit.png</file>
         <file>0_32.png</file>
         <file>0_s.png</file>
         <file>1_32.png</file>

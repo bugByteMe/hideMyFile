@@ -21,11 +21,13 @@ std::string readBinStr(std::string, QProgressBar *, unsigned long long &, QLabel
 
 std::string strToBin(std::string);
 
-void modify(unsigned char &, int);
+inline void modify(unsigned char &, int, int);
 
-void writeToPic(std::string, std::string, std::string, std::string, unsigned long long, QProgressBar *, QLabel *);
+void writeToPic(std::string, std::string, std::string, std::string, unsigned long long, int, QProgressBar *, QLabel *);
 
 QString getPicPath(QLabel *, Pagetwo *);
+
+std::string costumPicPath(PageOne *);
 
 bool getlast(int, std::string &, std::string &);
 
@@ -39,4 +41,5 @@ int ZO(char);
 
 std::string binToHex(std::string);
 
+void getbit(int, int, std::string &);
 #endif // TOOL_H

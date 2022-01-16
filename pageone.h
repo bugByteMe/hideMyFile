@@ -26,8 +26,15 @@ private slots:
 
     void on_randPic_clicked();
 
+    void on_customPic_clicked();
+
+    void on_slider_sliderMoved(int position);
+
 private:
     Ui::PageOne *ui;
+    int tunnel = 1;
+    long long picCapacity = 3107520;
+    long long fileSize = 0;
     QString filePathStr;
     QString savePathStr;
     QImage previewImg;
@@ -35,6 +42,7 @@ private:
     std::string prePicName = ":/pic/1_s.png", writePicName = ":/pic/1_32.png";
     unsigned long long dataLen;
     void paintEvent(QPaintEvent *event);
+    void setStatus();
 };
 
 #endif // PAGEONE_H

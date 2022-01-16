@@ -4,7 +4,7 @@
 
 template <typename T>
 QString getFilePath(QLabel *lbptr, T *pgptr){
-    QString tmpstr;
+    QString tmpstr = "";
     QFileDialog *dlg = new QFileDialog(pgptr);
     dlg->setDirectory(".");
     dlg->setNameFilter("File(*.*)");
@@ -13,7 +13,6 @@ QString getFilePath(QLabel *lbptr, T *pgptr){
     QStringList filenames;
     if(dlg->exec()){
         filenames = dlg->selectedFiles();
-        std::cout<<filenames[0].toStdString()<<std::endl;
     }
     if(!filenames.empty()){
         tmpstr = filenames[0];
@@ -35,20 +34,18 @@ std::string readBinStr(std::string path, QProgressBar *bar, unsigned long long &
     unsigned char *ch;
     FILE *fi  = fopen(&(path[0]),"rb");
     fseek(fi,0,SEEK_END);
-    int len = ftell(fi);
+    unsigned long long len = ftell(fi);
     dL = len;
     ch = (unsigned char *)malloc(len*sizeof(unsigned char));
     fseek(fi,0,SEEK_SET);
     fread(ch, sizeof(unsigned char), len, fi);
     fclose(fi);
-    //std::cout<<_msize(ch)<<std::endl;
-
     //Convert to Bin
     lb->setText("转换数据...");
     std::string res;
 
-    for(int i=0; i<len; i++){
-        bar->setValue((int)(i*100/len/2));
+    for(unsigned long long i=0; i<len; i++){
+        bar->setValue((unsigned long long)(i*100LL/len/2));
         int tmp = ch[i];
         std::string s;
         int cnt = 0;
@@ -93,22 +90,21 @@ std::string strToBin(std::string orgStr){
     return res;
 }
 
-void modify(unsigned char &a, int b){
+inline void modify(unsigned char &a, int b, int t){
     int k = a;
     if(b == 0){
-        if(k & 1 == 1){
-            k = k-1;
-        }
+        k &= ~(1<<(t-1));
     }else{
-        k |= 1;
+        k |= (1<<(t-1));
     }
     a = k;
 }
 
-void writeToPic(std::string picName, std::string filePath, std::string savePath, std::string binStr, unsigned long long dataLength, QProgressBar *bar, QLabel *lb){
+void writeToPic(std::string picName, std::string filePath, std::string savePath, std::string binStr, unsigned long long dataLength, int tunnel, QProgressBar *bar, QLabel *lb){
     QImage img = QImage(QString::fromStdString(picName));
+    //QImage img = QImage(":/pic/test.jpeg");
     img = img.convertToFormat(QImage::Format_RGB32);
-    int height = 2160, width = 3840;
+    int height = img.height(), width = img.width();
     uchar *imgbit = img.bits();
     std::string tmp, fileName, fileNameBin;
     //get filename
@@ -124,46 +120,47 @@ void writeToPic(std::string picName, std::string filePath, std::string savePath,
     fileNameBin = strToBin(fileName);
     QCoreApplication::processEvents();
     //write filename
-    int ptr = 0;
+    unsigned long long ptr = 0;
     for(int i=0; i<width; i++){
         //r
-        modify(imgbit[0 + i*4+2], fileNameBin[ptr]-'0');
+        modify(imgbit[0 + i*4+2], fileNameBin[ptr]-'0',1);
         ptr++;
         if(ptr == fileNameBin.length()) break;
         //g
-        modify(imgbit[0 + i*4+1], fileNameBin[ptr]-'0');
+        modify(imgbit[0 + i*4+1], fileNameBin[ptr]-'0',1);
         ptr++;
         if(ptr == fileNameBin.length()) break;
         //b
-        modify(imgbit[0 + i*4+0], fileNameBin[ptr]-'0');
+        modify(imgbit[0 + i*4+0], fileNameBin[ptr]-'0',1);
         ptr++;
         if(ptr == fileNameBin.length()) break;
     }
     //write datasize
     lb->setText("写入大小...");
     std::string datLenStr, datBinStr;
+    std::string str;
     while(dataLength > 0){
-        std::string str;
         int a = dataLength%10;
         str += a + '0';
         dataLength /= 10;
-        for(int i=str.length()-1; i>=0; i--){
-            datLenStr += str[i];
-        }
     }
+    for(int i=str.length()-1; i>=0; i--){
+        datLenStr += str[i];
+    }
+    datLenStr += tunnel + '0';
     datBinStr = strToBin(datLenStr);
     ptr = 0;
     for(int i=0; i<width; i++){
         //r
-        modify(imgbit[width*4 + i*4+2], datBinStr[ptr]-'0');
+        modify(imgbit[width*4 + i*4+2], datBinStr[ptr]-'0',1);
         ptr++;
         if(ptr == datBinStr.length()) break;
         //g
-        modify(imgbit[width*4 + i*4+1], datBinStr[ptr]-'0');
+        modify(imgbit[width*4 + i*4+1], datBinStr[ptr]-'0',1);
         ptr++;
         if(ptr == datBinStr.length()) break;
         //b
-        modify(imgbit[width*4 + i*4+0], datBinStr[ptr]-'0');
+        modify(imgbit[width*4 + i*4+0], datBinStr[ptr]-'0',1);
         ptr++;
         if(ptr == datBinStr.length()) break;
     }
@@ -171,29 +168,34 @@ void writeToPic(std::string picName, std::string filePath, std::string savePath,
     //write data
     lb->setText("写入数据...");
     ptr = 0;
-    for(int i=2; i<height; i++){
+    unsigned long long length = binStr.length();
+    for(int t=1; t<=tunnel; t++){
         bool flag = 0;
-        for(int j=0; j<width; j++){
-            //r
-            modify(imgbit[i*width*4 + j*4+2], binStr[ptr]-'0');
-            ptr++;
-            if(ptr == binStr.length()){ flag = 1; break;}
-            //g
-            modify(imgbit[i*width*4 + j*4+1], binStr[ptr]-'0');
-            ptr++;
-            if(ptr == binStr.length()){ flag = 1; break;}
-            //b
-            modify(imgbit[i*width*4 + j*4+0], binStr[ptr]-'0');
-            ptr++;
-            if(ptr == binStr.length()){ flag = 1; break;}
-            bar->setValue((int)(50+ptr*100/binStr.length()/2));
+        for(int i=2; i<height; i++){
+            //bool flag = 0;
+            for(int j=0; j<width; j++){
+                //r //3107520
+                modify(imgbit[i*width*4 + j*4+2], binStr[ptr]-'0',t);
+                ptr++;
+                if(ptr == length){ flag = 1; break;}
+                //g
+                modify(imgbit[i*width*4 + j*4+1], binStr[ptr]-'0',t);
+                ptr++;
+                if(ptr == length){ flag = 1; break;}
+                //b
+                modify(imgbit[i*width*4 + j*4+0], binStr[ptr]-'0',t);
+                ptr++;
+                if(ptr == length){ flag = 1; break;}
+                bar->setValue((unsigned long long)(50ULL+ptr*100ULL/length/2));
+            }
+            if(flag) break;
         }
-        QCoreApplication::processEvents();
         if(flag) break;
     }
     //save pic
     QImage img2;
-    img2 = QImage(imgbit,width,height,QImage::Format_RGB32);
+    img2 = QImage(imgbit,width,height,QImage::Format_ARGB32);
+    img2 = img2.convertToFormat(QImage::Format_RGB32);
     QCoreApplication::processEvents();
     img2.save(QString::fromStdString(savePath)+"/output.png");
 }
@@ -214,6 +216,29 @@ QString getPicPath(QLabel *lbptr, Pagetwo *pgptr){
         lbptr->setText(tmpstr);
     }
     return tmpstr;
+}
+std::string costumPicPath(PageOne * pgptr){
+    QString tmpstr = "";
+    QFileDialog *dlg = new QFileDialog(pgptr);
+    dlg->setDirectory(".");
+    dlg->setNameFilter("*.png *.jpg *.jpeg");
+    dlg->setFileMode(QFileDialog::ExistingFiles);
+    dlg->setViewMode(QFileDialog::Detail);
+    QStringList filenames;
+    if(dlg->exec()){
+        filenames = dlg->selectedFiles();
+    }
+    if(!filenames.empty()){
+        tmpstr = filenames[0];
+    }else{
+        return tmpstr.toStdString();
+    }
+    QImage img;
+    img.load(tmpstr);
+    QSize size = QSize(800,500);
+    img = img.scaled(size, Qt::IgnoreAspectRatio);
+    img.save("previewImg.png");
+    return tmpstr.toLocal8Bit().toStdString();
 }
 
 bool getlast(int x, std::string &last, std::string &str){
@@ -280,6 +305,14 @@ std::string solve(const char *src){
     return out;
 }
 
+void getbit(int x, int t, std::string &str){
+    if((x & (1<<(t-1))) == (1<<(t-1))){
+        str += "1";
+    }else{
+        str += "0";
+    }
+}
+
 void getFile(std::string picPath, std::string savePath, QProgressBar *bar, QLabel *lb){
     QImage img = QImage(QString::fromStdString(picPath));
     img = img.convertToFormat(QImage::Format_RGB32);
@@ -304,11 +337,11 @@ void getFile(std::string picPath, std::string savePath, QProgressBar *bar, QLabe
     QCoreApplication::processEvents();
     fileNameHex = binToHex(fileNameBin);
     fileName = solve(&(fileNameHex[0]));
-    std::cout<<fileName<<std::endl;
     //get size
     last = "";
     std::string sizeBin, sizeHex, sizeStr;
     unsigned long long size = 0;
+    int tunnel;
     for(int j=0; j<width; j++){
         int r = imgbit[width*4+j*4+2];
         int g = imgbit[width*4+j*4+1];
@@ -326,73 +359,69 @@ void getFile(std::string picPath, std::string savePath, QProgressBar *bar, QLabe
     QCoreApplication::processEvents();
     sizeHex = binToHex(sizeBin);
     sizeStr = solve(&(sizeHex[0]));
-    for(int i=sizeStr.length()-1; i>=0; i--){
+    tunnel = sizeStr[sizeStr.length()-1] - '0';
+    sizeStr = sizeStr.substr(0,sizeStr.length()-1);
+    for(int i=0; i<sizeStr.length(); i++){
         size *= 10;
         size += sizeStr[i] - '0';
     }
-    size *= 8;
+    size *= 8ULL;
     //get binstr
     lb->setText("读取数据...");
     std::string binStr;
-    int ptr = 0;
-    for(int i=2; i<height; i++){
+    unsigned long long ptr = 0;
+    for(int t=1; t<=tunnel; t++){
         bool flag = 0;
-        for(int j=0; j<width; j++){
-            int r = imgbit[i*width*4+j*4+2];
-            int g = imgbit[i*width*4+j*4+1];
-            int b = imgbit[i*width*4+j*4];
-            if((r & 1) == 1){
-                binStr += "1";
-            }else{
-                binStr += "0";
+        for(int i=2; i<height; i++){
+            //bool flag = 0;
+            for(int j=0; j<width; j++){
+
+                int r = imgbit[i*width*4+j*4+2];
+                int g = imgbit[i*width*4+j*4+1];
+                int b = imgbit[i*width*4+j*4];
+
+                getbit(r,t,binStr);
+                ptr++;
+                if(ptr == size){
+                    flag = 1;
+                    break;
+                }
+                getbit(g,t,binStr);
+                ptr++;
+                if(ptr == size){
+                    flag = 1;
+                    break;
+                }
+                getbit(b,t,binStr);
+                ptr++;
+                if(ptr == size){
+                    flag = 1;
+                    break;
+                }
+                bar->setValue((unsigned long long)ptr*100ULL/size);
             }
-            ptr++;
-            if(ptr == size){
-                flag = 1;
-                break;
-            }
-            if((g & 1) == 1){
-                binStr += "1";
-            }else{
-                binStr += "0";
-            }
-            ptr++;
-            if(ptr == size){
-                flag = 1;
-                break;
-            }
-            if((b & 1) == 1){
-                binStr += "1";
-            }else{
-                binStr += "0";
-            }
-            ptr++;
-            if(ptr == size){
-                flag = 1;
-                break;
-            }
-            bar->setValue((int)ptr*100/size);
+            if(flag) break;
         }
         if(flag) break;
     }
     unsigned char *ch;
-    ch = (unsigned char *)malloc(size/8*sizeof(unsigned char));
+    ch = (unsigned char *)malloc(size/8ULL*sizeof(unsigned char));
     lb->setText("写入数据...");
-    for(int i=0; i<binStr.length(); i+=8){
+    for(unsigned long long i=0; i<binStr.length(); i+=8ULL){
         int num = 0;
         for(int j=0; j<8; j++){
             if(binStr[i+j] == '1'){
                 num |= (1<<(7-j));
             }
         }
-        ch[i/8] = num;
+        ch[i/8ULL] = num;
     }
     savePath += "/" + fileName;
     QTextCodec *code = QTextCodec::codecForName("GB2312");
     QString qstr = QString::fromStdString(savePath);
     std::string path = code->fromUnicode(qstr).data();
     FILE *fp = fopen(path.c_str(),"wb");
-    fwrite(ch, sizeof(unsigned char), size/8, fp);
+    fwrite(ch, sizeof(unsigned char), size/8ULL, fp);
     fclose(fp);
     lb->setText("完成！");
     bar->setValue(100);
