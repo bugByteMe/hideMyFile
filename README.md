@@ -5,9 +5,9 @@ This program can write your file in a picture and extract it whenever you want.
 ### Features:
 
 * The picture will look the same as before.
-* 
+
 * Customize original picture.
-* 
+
 * Customize number of tunnels. (lower picture quality, higer capacity)
 
 Updating...
@@ -22,4 +22,4 @@ Updating...
  
 持续更新中...
 
-[Latest release](https://github.com/bugByteMe/hideMyFile/releases)
+[Latest release](https://github.com/bugByteMe/hideMyFile/releases/tag/v1.1.0)
